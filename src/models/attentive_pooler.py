@@ -134,3 +134,37 @@ class AttentiveClassifier(nn.Module):
         x = self.pooler(x).squeeze(1)
         x = self.linear(x)
         return x
+
+
+class LinearClassifier(nn.Module):
+    """ Linear Classifier """
+    def __init__(
+        self,
+        embed_dim=768,
+        num_classes=1000,
+        complete_block=True,
+    ):
+        super().__init__()
+        self.linear = nn.Linear(embed_dim, num_classes, bias=True)
+
+    def forward(self, x):
+        x = x.mean(dim=1)
+        x = self.linear(x)
+        return x
+
+
+class AttentionClassifier(nn.Module):
+    """ Attention Classifier """
+    def __init__(self, embed_dim=768, num_classes=1000):
+        super().__init__()
+        self.linear = nn.Linear(embed_dim, num_classes, bias=True)
+        self.attention = nn.Linear(embed_dim, 1)
+
+    def forward(self, x):
+        # Compute attention scores and apply softmax
+        weights = torch.softmax(self.attention(x), dim=1)
+        # Weighted sum of embeddings
+        x = torch.sum(weights * x, dim=1)
+        x = self.linear(x)
+        return x
+

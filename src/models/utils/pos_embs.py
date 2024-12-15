@@ -23,8 +23,8 @@ def get_3d_sincos_pos_embed(
                 or [1+grid_depth*grid_size*grid_size, embed_dim] (w/ cls_token)
     """
     grid_d = np.arange(grid_depth, dtype=float)
-    grid_h = np.arange(grid_size, dtype=float)
-    grid_w = np.arange(grid_size, dtype=float)
+    grid_h = np.arange(grid_size[0], dtype=float)
+    grid_w = np.arange(grid_size[1], dtype=float)
     grid_h, grid_d, grid_w = np.meshgrid(grid_h, grid_d, grid_w)  # order of meshgrid is very important for indexing as [d,h,w]
 
     if not uniform_power:
@@ -51,8 +51,8 @@ def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
         pos_embed: [grid_size*grid_size, embed_dim] (w/o cls_token)
                 or [1+grid_size*grid_size, embed_dim] (w/ cls_token)
     """
-    grid_h = np.arange(grid_size, dtype=float)
-    grid_w = np.arange(grid_size, dtype=float)
+    grid_h = np.arange(grid_size[0], dtype=float)
+    grid_w = np.arange(grid_size[1], dtype=float)
     grid_w, grid_h = np.meshgrid(grid_w, grid_h)  # order of meshgrid is very important for indexing as [h, w]
 
     emb_h = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid_h)  # (H*W, D/2)

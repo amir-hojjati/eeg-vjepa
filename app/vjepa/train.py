@@ -360,6 +360,9 @@ def main(args, resume_preempt=False):
                 loader = iter(unsupervised_loader)
                 udata = next(loader)
 
+    early_stopping_patience = 200
+    best_loss = float('inf')
+    epochs_without_improvement = 0
     # -- TRAINING LOOP
     for epoch in range(start_epoch, num_epochs):
         logger.info('Epoch %d' % (epoch + 1))
@@ -576,7 +579,23 @@ def main(args, resume_preempt=False):
             assert not np.isnan(loss), 'loss is nan'
 
         # -- Save Checkpoint
+        current_loss = loss_meter.avg
         logger.info('avg. loss %.3f' % loss_meter.avg)
+
+
+        # -- Early Stopping and Save Best
+        if current_loss < best_loss:
+            best_loss = current_loss
+            epochs_without_improvement = 0
+            # Save best model checkpoint if desired
+            best_model_path = os.path.join(folder, f'{tag}-best.pth.tar')
+            save_checkpoint(epoch + 1, best_model_path)
+        else:
+            epochs_without_improvement += 1
+            if epochs_without_improvement >= early_stopping_patience:
+                logger.info(f'Early stopping triggered after {epoch + 1} epochs.')
+                break  # Exit the training loop
+
         # -- Save Last
         if epoch % checkpoint_freq == 0 or epoch == (num_epochs - 1):
             save_checkpoint(epoch + 1, latest_path)

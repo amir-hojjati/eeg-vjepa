@@ -19,8 +19,13 @@ class PatchEmbed(nn.Module):
         embed_dim=768
     ):
         super().__init__()
+
+        if not isinstance(patch_size, tuple):
+            patch_size = (patch_size, ) * 2
+
         self.patch_size = patch_size
-        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
+        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=(patch_size[0], patch_size[1]),
+                              stride=(patch_size[0], patch_size[1]))
 
     def forward(self, x):
         B, C, H, W = x.shape
@@ -41,14 +46,18 @@ class PatchEmbed3D(nn.Module):
         embed_dim=768,
     ):
         super().__init__()
+
+        if not isinstance(patch_size, tuple):
+            patch_size = (patch_size, ) * 2
+
         self.patch_size = patch_size
         self.tubelet_size = tubelet_size
 
         self.proj = nn.Conv3d(
             in_channels=in_chans,
             out_channels=embed_dim,
-            kernel_size=(tubelet_size, patch_size, patch_size),
-            stride=(tubelet_size, patch_size, patch_size),
+            kernel_size=(tubelet_size, patch_size[0], patch_size[1]),
+            stride=(tubelet_size, patch_size[0], patch_size[1]),
         )
 
     def forward(self, x, **kwargs):

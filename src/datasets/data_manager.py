@@ -43,6 +43,7 @@ def init_data(
     repeat_wds=False,
     ipe=300,
     log_dir=None,
+    mode='pretrain'
 ):
 
     if (data.lower() == 'imagenet') \
@@ -86,6 +87,7 @@ def init_data(
             world_size=world_size,
             rank=rank,
             drop_last=drop_last,
-            log_dir=log_dir)
+            log_dir=log_dir,
+            mode=mode)
 
     return (data_loader, dist_sampler)

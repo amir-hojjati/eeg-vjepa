@@ -172,28 +172,27 @@ def make_transforms(
     normalize=((0.485, 0.456, 0.406),
                (0.229, 0.224, 0.225))
 ):
-    _frames_augmentation = EEGTransformEval()
 
-    # if not training and num_views_per_clip > 1:
-    #     print('Making EvalVideoTransform, multi-view')
-    #     _frames_augmentation = EvalVideoTransform(
-    #         num_views_per_clip=num_views_per_clip,
-    #         short_side_size=crop_size,
-    #         normalize=normalize,
-    #     )
-    #
-    # else:
-    #     _frames_augmentation = VideoTransform(
-    #         training=training,
-    #         random_horizontal_flip=random_horizontal_flip,
-    #         random_resize_aspect_ratio=random_resize_aspect_ratio,
-    #         random_resize_scale=random_resize_scale,
-    #         reprob=reprob,
-    #         auto_augment=auto_augment,
-    #         motion_shift=motion_shift,
-    #         crop_size=crop_size,
-    #         normalize=normalize,
-    #     )
+    if not training and num_views_per_clip > 1:
+        print('Making EvalVideoTransform, multi-view')
+        _frames_augmentation = EvalVideoTransform(
+            num_views_per_clip=num_views_per_clip,
+            short_side_size=crop_size,
+            normalize=normalize,
+        )
+
+    else:
+        _frames_augmentation = VideoTransform(
+            training=training,
+            random_horizontal_flip=random_horizontal_flip,
+            random_resize_aspect_ratio=random_resize_aspect_ratio,
+            random_resize_scale=random_resize_scale,
+            reprob=reprob,
+            auto_augment=auto_augment,
+            motion_shift=motion_shift,
+            crop_size=crop_size,
+            normalize=normalize,
+        )
     return _frames_augmentation
 
 
@@ -322,40 +321,6 @@ class EvalVideoTransform(object):
             all_views.append(view)
 
         return all_views
-
-
-class EEGTransformEval(object):
-    def __init__(
-            self,
-            random_horizontal_flip=True,
-            random_resize_aspect_ratio=(3 / 4, 4 / 3),
-            random_resize_scale=(0.3, 1.0),
-            reprob=0.0,
-            auto_augment=False,
-            motion_shift=False,
-            crop_size=224,
-            normalize=((0.485, 0.456, 0.406),
-                       (0.229, 0.224, 0.225))
-    ):
-        # ***
-        # # GLOBAL OVERRIDE
-        crop_size = (19, 500)
-        random_horizontal_flip = False
-        # ***
-        if not isinstance(crop_size, tuple):
-            crop_size = (crop_size,) * 2
-
-        self.crop_size = crop_size
-        self.mean = torch.tensor(normalize[0], dtype=torch.float32)
-        self.std = torch.tensor(normalize[1], dtype=torch.float32)
-
-    def __call__(self, buffer):
-        buffer = torch.tensor(buffer, dtype=torch.float32)
-
-        buffer = buffer.permute(3, 0, 1, 2)  # T H W C -> C T H W
-
-        # buffer = _tensor_normalize_inplace(buffer, self.mean, self.std)
-        return buffer
 
 
 def tensor_normalize(tensor, mean, std):

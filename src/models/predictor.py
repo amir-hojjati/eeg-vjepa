@@ -46,6 +46,13 @@ class VisionTransformerPredictor(nn.Module):
         **kwargs
     ):
         super().__init__()
+
+        # ***
+        # # GLOBAL OVERRIDE
+        img_size = (19, 500)
+        patch_size = (4, 30)
+        # ***
+
         # Map input to predictor dimension
         self.predictor_embed = nn.Linear(embed_dim, predictor_embed_dim, bias=True)
 
@@ -67,19 +74,19 @@ class VisionTransformerPredictor(nn.Module):
         self.tubelet_size = tubelet_size
         self.is_video = num_frames > 1
 
-        grid_size = self.input_size // self.patch_size
+        grid_size = (self.input_size[0] // self.patch_size[0], self.input_size[1] // self.patch_size[1])
         grid_depth = self.num_frames // self.tubelet_size
 
         if self.is_video:
             self.num_patches = num_patches = (
                 (num_frames // tubelet_size)
-                * (img_size // patch_size)
-                * (img_size // patch_size)
+                * (img_size[0] // patch_size[0])
+                * (img_size[1] // patch_size[1])
             )
         else:
             self.num_patches = num_patches = (
-                (img_size // patch_size)
-                * (img_size // patch_size)
+                (img_size[0] // patch_size[0])
+                * (img_size[1] // patch_size[1])
             )
         # Position embedding
         self.uniform_power = uniform_power
@@ -120,7 +127,7 @@ class VisionTransformerPredictor(nn.Module):
 
     def _init_pos_embed(self, pos_embed):
         embed_dim = pos_embed.size(-1)
-        grid_size = self.input_size // self.patch_size
+        grid_size = (self.input_size[0] // self.patch_size[0], self.input_size[1] // self.patch_size[1])
         if self.is_video:
             grid_depth = self.num_frames // self.tubelet_size
             sincos = get_3d_sincos_pos_embed(

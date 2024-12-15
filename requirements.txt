@@ -2,6 +2,7 @@ torch>=2
 torchvision
 pyyaml
 numpy
+scipy
 opencv-python
 submitit
 braceexpand

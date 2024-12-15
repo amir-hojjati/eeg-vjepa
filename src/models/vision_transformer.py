@@ -42,6 +42,14 @@ class VisionTransformer(nn.Module):
         **kwargs
     ):
         super().__init__()
+
+        # ***
+        # # GLOBAL OVERRIDE
+        img_size = (19, 500)
+        patch_size = (4, 30)
+        in_chans = 1
+        # ***
+
         self.num_features = self.embed_dim = embed_dim
         self.num_heads = num_heads
         self.out_layers = out_layers
@@ -53,7 +61,7 @@ class VisionTransformer(nn.Module):
         self.tubelet_size = tubelet_size
         self.is_video = num_frames > 1
 
-        grid_size = self.input_size // self.patch_size
+        grid_size = (self.input_size[0] // self.patch_size[0], self.input_size[1] // self.patch_size[1])
         grid_depth = self.num_frames // self.tubelet_size
 
         # Tokenize pixels with convolution
@@ -65,8 +73,8 @@ class VisionTransformer(nn.Module):
                 embed_dim=embed_dim)
             self.num_patches = (
                 (num_frames // tubelet_size)
-                * (img_size // patch_size)
-                * (img_size // patch_size)
+                * (img_size[0] // patch_size[0])
+                * (img_size[1] // patch_size[1])
             )
         else:
             self.patch_embed = PatchEmbed(
@@ -74,8 +82,8 @@ class VisionTransformer(nn.Module):
                 in_chans=in_chans,
                 embed_dim=embed_dim)
             self.num_patches = (
-                (img_size // patch_size)
-                * (img_size // patch_size)
+                (img_size[0] // patch_size[0])
+                * (img_size[1] // patch_size[1])
             )
 
         # Position embedding
@@ -111,7 +119,7 @@ class VisionTransformer(nn.Module):
 
     def _init_pos_embed(self, pos_embed):
         embed_dim = pos_embed.size(-1)
-        grid_size = self.input_size // self.patch_size
+        grid_size = (self.input_size[0] // self.patch_size[0], self.input_size[1] // self.patch_size[1])
         if self.is_video:
             grid_depth = self.num_frames // self.tubelet_size
             sincos = get_3d_sincos_pos_embed(
@@ -202,19 +210,20 @@ class VisionTransformer(nn.Module):
 
             # If pos_embed already corret size, just return
             _, _, T, H, W = x.shape
-            if H == self.input_size and W == self.input_size and T == self.num_frames:
+            if H == self.input_size[0] and W == self.input_size[1] and T == self.num_frames:
                 return pos_embed
 
             # Convert depth, height, width of input to be measured in patches
             # instead of pixels/frames
             T = T // self.tubelet_size
-            H = H // self.patch_size
-            W = W // self.patch_size
+            H = H // self.patch_size[0]
+            W = W // self.patch_size[1]
 
             # Compute the initialized shape of the positional embedding measured
             # in patches
             N_t = self.num_frames // self.tubelet_size
-            N_h = N_w = self.input_size // self.patch_size
+            N_h = self.input_size[0] // self.patch_size[0]
+            N_w = self.input_size[1] // self.patch_size[1]
             assert N_h * N_w * N_t == N, 'Positional embedding initialized incorrectly'
 
             # Compute scale factor for spatio-temporal interpolation
@@ -231,11 +240,11 @@ class VisionTransformer(nn.Module):
 
             # If pos_embed already corret size, just return
             _, _, H, W = x.shape
-            if H == self.input_size and W == self.input_size:
+            if H == self.input_size[0] and W == self.input_size[1]:
                 return pos_embed
 
             # Compute scale factor for spatial interpolation
-            npatch = (H // self.patch_size) * (W // self.patch_size)
+            npatch = (H // self.patch_size[0]) * (W // self.patch_size[1])
             scale_factor = math.sqrt(npatch / N)
 
             pos_embed = nn.functional.interpolate(

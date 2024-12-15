@@ -29,6 +29,12 @@ class MaskCollator(object):
     ):
         super(MaskCollator, self).__init__()
 
+        # ***
+        # # GLOBAL OVERRIDE
+        crop_size = (19, 500)
+        patch_size = (4, 30)
+        # ***
+
         self.mask_generators = []
         for m in cfgs_mask:
             mask_generator = _MaskGenerator(
@@ -81,8 +87,12 @@ class _MaskGenerator(object):
         super(_MaskGenerator, self).__init__()
         if not isinstance(crop_size, tuple):
             crop_size = (crop_size, ) * 2
+
+        if not isinstance(spatial_patch_size, tuple):
+            spatial_patch_size = (spatial_patch_size, ) * 2
+
         self.crop_size = crop_size
-        self.height, self.width = crop_size[0] // spatial_patch_size, crop_size[1] // spatial_patch_size
+        self.height, self.width = crop_size[0] // spatial_patch_size[0], crop_size[1] // spatial_patch_size[1]
         self.duration = num_frames // temporal_patch_size
 
         self.spatial_patch_size = spatial_patch_size

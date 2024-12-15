@@ -6,6 +6,7 @@
 #
 
 import os
+import requests
 import pathlib
 import warnings
 
@@ -45,6 +46,7 @@ def make_videodataset(
     pin_mem=True,
     duration=None,
     log_dir=None,
+    mode='pretrain'
 ):
     dataset = VideoDataset(
         data_paths=data_paths,
@@ -58,7 +60,8 @@ def make_videodataset(
         filter_long_videos=filter_long_videos,
         duration=duration,
         shared_transform=shared_transform,
-        transform=transform)
+        transform=transform,
+        mode=mode)
 
     logger.info('VideoDataset dataset created')
     if datasets_weights is not None:
@@ -104,7 +107,9 @@ class VideoDataset(torch.utils.data.Dataset):
         allow_clip_overlap=False,
         filter_short_videos=False,
         filter_long_videos=int(10**9),
+        modality='eeg',
         duration=None,  # duration in seconds
+        mode='pretrain'
     ):
         self.data_paths = data_paths
         self.datasets_weights = datasets_weights
@@ -117,7 +122,9 @@ class VideoDataset(torch.utils.data.Dataset):
         self.allow_clip_overlap = allow_clip_overlap
         self.filter_short_videos = filter_short_videos
         self.filter_long_videos = filter_long_videos
+        self.modality = modality
         self.duration = duration
+        self.mode = mode
 
         if VideoReader is None:
             raise ImportError('Unable to import "decord" which is required to read videos.')
@@ -141,6 +148,33 @@ class VideoDataset(torch.utils.data.Dataset):
                 labels += [0] * len(data)
                 num_samples = len(data)
                 self.num_samples_per_dataset.append(len(data))
+
+            # If it's a directory
+            elif data_path and ('.' not in data_path[-5:]):
+                if self.mode in ('train', 'eval'):
+                    data_path = os.path.join(data_path, self.mode)
+                    classes = [d.name for d in os.scandir(data_path) if d.is_dir()]
+                    classes.sort()
+                    class_to_idx = {classes[i]: i for i in range(len(classes))}
+                    for target_class in sorted(class_to_idx.keys()):
+                        class_index = class_to_idx[target_class]
+                        target_dir = os.path.join(data_path, target_class)
+                        if not os.path.isdir(target_dir):
+                            continue
+                        for root, _, fnames in sorted(os.walk(target_dir, followlinks=True)):
+                            for fname in sorted(fnames):
+                                data = os.path.join(root, fname)
+                                samples += [data]
+                                labels += [class_index]
+
+                else:
+                    data = os.listdir(data_path)
+                    data = [os.path.join(data_path, file)
+                            for file in data if file.endswith('.npy')]
+                    samples += data
+                    labels += [0] * len(data)
+                num_samples = len(labels)
+                self.num_samples_per_dataset.append(len(labels))
 
         # [Optional] Weights for each sample to be used by downstream
         # weighted video sampler
@@ -172,12 +206,13 @@ class VideoDataset(torch.utils.data.Dataset):
             """ Split video into a list of clips """
             fpc = self.frames_per_clip
             nc = self.num_clips
-            return [video[i*fpc:(i+1)*fpc] for i in range(nc)]
+            return ([video[i*fpc:(i+1)*fpc] for i in range(nc)],
+                    [label for i in range(nc)])
 
         # Parse video into frames & apply data augmentations
         if self.shared_transform is not None:
             buffer = self.shared_transform(buffer)
-        buffer = split_into_clips(buffer)
+        buffer, label = split_into_clips(buffer)
         if self.transform is not None:
             buffer = [self.transform(clip) for clip in buffer]
 
@@ -188,8 +223,12 @@ class VideoDataset(torch.utils.data.Dataset):
 
         fname = sample
         if not os.path.exists(fname):
-            warnings.warn(f'video path not found {fname=}')
-            return [], None
+            warnings.warn(f'video path not found {fname=}, trying to download')
+            try:
+                fname = self.download_file(fname)
+            except Exception:
+                warnings.warn(f'failed to download {fname=}')
+                raise
 
         _fsize = os.path.getsize(fname)
         if _fsize < 1 * 1024:  # avoid hanging issue
@@ -199,14 +238,20 @@ class VideoDataset(torch.utils.data.Dataset):
             warnings.warn(f'skipping long video of size {_fsize=} (bytes)')
             return [], None
 
-        try:
-            vr = VideoReader(fname, num_threads=-1, ctx=cpu(0))
-        except Exception:
-            return [], None
+        if self.modality != 'eeg':
+            try:
+                vr = VideoReader(fname, num_threads=-1, ctx=cpu(0))
+            except Exception:
+                return [], None
+
+        else:
+            vr = np.load(fname).astype("float32")
+            # add channel dimension
+            vr = np.expand_dims(vr, axis=3)
 
         fpc = self.frames_per_clip
         fstp = self.frame_step
-        if self.duration is not None:
+        if (self.duration is not None) and (self.modality != 'eeg'):
             try:
                 fps = vr.get_avg_fps()
                 fstp = int(self.duration * fps / fpc)
@@ -218,7 +263,8 @@ class VideoDataset(torch.utils.data.Dataset):
             warnings.warn(f'skipping video of length {len(vr)}')
             return [], None
 
-        vr.seek(0)  # Go to start of video before sampling frames
+        if self.modality != 'eeg':
+            vr.seek(0)  # Go to start of video before sampling frames
 
         # Partition video into equal sized segments and sample each clip
         # from a different segment
@@ -265,8 +311,20 @@ class VideoDataset(torch.utils.data.Dataset):
             clip_indices.append(indices)
             all_indices.extend(list(indices))
 
-        buffer = vr.get_batch(all_indices).asnumpy()
+        if self.modality != 'eeg':
+            buffer = vr.get_batch(all_indices).asnumpy()
+        else:
+            buffer = vr[all_indices]
         return buffer, clip_indices
+
+    @staticmethod
+    def download_file(url):
+        file_name = url.split('/')[-1]
+        response = requests.get(url)
+        response.raise_for_status()
+        with open(file_name, 'wb') as file:
+            file.write(response.content)
+        return os.path.abspath(file_name)
 
     def __len__(self):
         return len(self.samples)
