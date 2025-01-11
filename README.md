@@ -36,6 +36,11 @@ python setup.py install
 
 
 ## Citation
+Our EEG adaption, training runs, and evaluations:
+```bibtex
+Coming soon
+```
+
 Original V-JEPA Paper:
 ```bibtex
 @article{bardes2024revisiting,
@@ -44,3 +49,5 @@ Original V-JEPA Paper:
   journal={arXiv:2404.08471},
   year={2024}
 }
+```
+

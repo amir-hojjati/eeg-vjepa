@@ -32,6 +32,6 @@ pretrain:
   use_silu: false
   tight_silu: false
   patch_size: 16
-  folder: "/path/to/output_jepa/v9.2 (no flip, spatial, 10, 400, small (pred 6), frame_skip 3, frame_len 32, 1 clip, tubelet 4, patch_size (4,30))"
+  folder: "/path/to/output_jepa/v9.2"
   checkpoint: "jepa-best.pth.tar"  # name of pretrained model file inside folder
   write_tag: jepa
