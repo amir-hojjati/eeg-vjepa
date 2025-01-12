@@ -12,7 +12,9 @@ data:
   tubelet_size: 4
   sampling_rate: 3
   crop_size: 224
-  patch_size: 16
+  patch_size:
+  - 4
+  - 30
   pin_mem: true
   num_workers: 4
   filter_short_videos: false

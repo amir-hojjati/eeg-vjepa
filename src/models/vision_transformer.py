@@ -46,7 +46,8 @@ class VisionTransformer(nn.Module):
         # ***
         # # GLOBAL OVERRIDE
         img_size = (19, 500)
-        patch_size = (4, 30)
+        if isinstance(patch_size, (list, tuple)) and len(patch_size) != 2:
+            patch_size = (4, 30)
         in_chans = 1
         # ***
 

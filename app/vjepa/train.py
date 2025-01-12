@@ -116,6 +116,8 @@ def main(args, resume_preempt=False):
     duration = cfgs_data.get('clip_duration', None)
     crop_size = cfgs_data.get('crop_size', 224)
     patch_size = cfgs_data.get('patch_size')
+    if isinstance(patch_size, list):
+        patch_size = tuple(patch_size)
     pin_mem = cfgs_data.get('pin_mem', False)
     num_workers = cfgs_data.get('num_workers', 1)
     filter_short_videos = cfgs_data.get('filter_short_videos', False)

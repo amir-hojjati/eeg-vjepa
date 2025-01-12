@@ -77,6 +77,8 @@ def main(args_eval, resume_preempt=False):
     checkpoint_key = args_pretrain.get('checkpoint_key', 'target_encoder')
     model_name = args_pretrain.get('model_name', None)
     patch_size = args_pretrain.get('patch_size', None)
+    if isinstance(patch_size, list):
+        patch_size = tuple(patch_size)
     pretrain_folder = args_pretrain.get('folder', None)
     ckp_fname = args_pretrain.get('checkpoint', None)
     tag = args_pretrain.get('write_tag', None)
