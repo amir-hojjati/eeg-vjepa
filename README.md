@@ -95,7 +95,7 @@ python -m app.main \
 ```
 
 
-### Eval
+### Eval and Fine-tuning
 
 ```bash
 python -m evals.main \
